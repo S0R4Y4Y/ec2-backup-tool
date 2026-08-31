@@ -19,6 +19,33 @@ def backup(instance_id):
     print(f"Snapshot started for {instance_id}")
     print(f"Snapshot ID: {snapshot['SnapshotId']}")
 
+def list_instances():
+    response = ec2.describe_instances()
+
+    print(f"{'Instance_ID':<25} {'Name':<25} {'Instance_Type':<15} {'State':<15}")
+    print("-" * 75)
+
+    for reservation in response['Reservations']:
+        for instance in reservation['Instances']:
+            instance_id = instance['InstanceId']
+            instance_type = instance['InstanceType']
+            state = instance['State']['Name']
+
+            name = 'N/A'
+            if 'Tags' in instance:
+                for tag in instance['Tags']:
+                    if tag['Key'] == 'Name':
+                        name = tag['Value']
+
+            if state == 'running':
+                state = Fore.GREEN + state + Style.RESET_ALL
+            elif state == 'pending':
+                state = Fore.YELLOW + state + Style.RESET_ALL
+            elif state == 'stopped':
+                state = Fore.RED + state + Style.RESET_ALL
+
+            print(f"{instance_id:<25} {name:<25} {instance_type:<15} {state:<15}")
+
 def list_snapshots():
     response = ec2.describe_snapshots(OwnerIds=['self'])
     
@@ -68,7 +95,7 @@ def snapshot_info(snapshot_id):
 
 def main():
     parser = argparse.ArgumentParser(description='EC2 Backup Tool')
-    parser.add_argument('action', choices=['backup', 'list', 'delete', 'info'],
+    parser.add_argument('action', choices=['backup', 'list-instances', 'list', 'delete', 'info'],
                         help='Action to perform')
     parser.add_argument('--instance-id', help='EC2 Instance ID')
     parser.add_argument('--snapshot-id', help='EC2 Snapshot ID')
@@ -80,6 +107,9 @@ def main():
             print("Error: --instance-id required for backup action")
             return
         backup(args.instance_id)
+
+    elif args.action == 'list-instances':
+        list_instances()
 
     elif args.action == 'list':
         list_snapshots()
